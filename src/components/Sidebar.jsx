@@ -71,7 +71,6 @@ function Sidebar() {
                 <button className="sidebar-toggler btn x"><i data-feather="x"></i></button>
             </div>
         </div>
-
     );
 }
 
