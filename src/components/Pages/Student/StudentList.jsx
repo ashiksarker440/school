@@ -1,22 +1,24 @@
 import { useState, useMemo, useEffect } from "react";
-import { NavLink } from 'react-router'
+import { NavLink, Link } from 'react-router'
+import axios from '../../../Lib/axios';
 export default function StudentList() {
     const [students, setStudents] = useState([]);
     const [editingId, setEditingId] = useState(null);
     const [search, setSearch] = useState("");
     const [viewStudent, setViewStudent] = useState(null);
 
-    function fetchData() {
-        fetch('http://localhost/school_management/Student/index.php')
-            .then(response => response.json())
-            .then(data => setStudents(data.data))
-            .catch(error => console.error('Error fetching student:', error));
+    async function fetchData() {
+        try {
+            const response = await axios.get('Student/index.php');
+            setStudents(response.data.data);
+        } catch (error) {
+            console.error('Error fetching student:', error);
+        }
     }
 
     useEffect(() => {
         fetchData();
-    }
-        , []);
+    }, []);
 
     //Edit
     const handleEdit = (student) => {
@@ -26,11 +28,15 @@ export default function StudentList() {
     };
 
     // Delete
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this student?")) return;
-        setStudents((prev) => prev.filter((s) => s.id !== id));
-        if (editingId === id) resetForm();
-        if (viewStudent && viewStudent.id === id) setViewStudent(null);
+
+        try {
+            await axios.delete(`Student/delete.php?id=${id}`);
+            await fetchData();
+        } catch (error) {
+            console.error('Error deleting student:', error);
+        }
     };
 
     // Search
@@ -87,12 +93,12 @@ export default function StudentList() {
                                             </td>
                                             <td>{s.admission_number}</td>
                                             <td>{s.name}</td>
-                                            <td>{s.classId} - {s.section}</td>
+                                            <td>{s.class_id} - {s.section}</td>
                                             <td>{s.guardian_relation || "-"}</td>
                                             <td>{s.guardian_phone || "-"}</td>
                                             <td className="text-end text-nowrap">
-                                                <button className="btn btn-sm btn-info me-1" onClick={() => setViewStudent(s)}>View</button>
-                                                <button className="btn btn-sm btn-warning me-1" onClick={() => handleEdit(s)}>Edit</button>
+                                                <Link className="btn btn-sm btn-info me-1" to={`/student/${s.id}`}>View</Link>
+                                                <Link className="btn btn-sm btn-warning me-1" to={`/student/edit/${s.id}`}>Edit</Link>
                                                 <button className="btn btn-sm btn-danger" onClick={() => handleDelete(s.id)}>Delete</button>
                                             </td>
                                         </tr>

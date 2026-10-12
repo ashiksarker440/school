@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router";
+import axios from "../../../Lib/axios";
 
 const SUBJECTS = ["Bangla", "English", "Mathematics", "Science", "Social Science", "Religion", "ICT", "Physics", "Chemistry", "Biology"];
 const QUALIFICATIONS = ["HSC", "Bachelor (B.A / B.Sc / B.Com)", "B.Ed", "Masters (M.A / M.Sc / M.Com)", "M.Ed", "PhD"];
@@ -10,7 +11,7 @@ const emptyForm = {
     phone: "",
     password: "",
     qualification: "",
-    subject: "",
+    main_subject: "",
     salary: "",
     joining_date: "",
     address: "",
@@ -28,24 +29,34 @@ function Field({ label, children }) {
 }
 
 export default function TeacherManagement() {
-    const [teachers, setTeachers] = useState([]);
+    let { id } = useParams();
     const [form, setForm] = useState(emptyForm);
     const [editingId, setEditingId] = useState(null);
-    const [search, setSearch] = useState("");
-    const [viewTeacher, setViewTeacher] = useState(null);
+    const [selectedfile, setSelectedFile] = useState([]);// image file
+
+    const fetchData = async () => {
+        try {
+            const response = await axios.get('Teacher/single.php?id=' + id);
+            const data = await response.data;
+            setForm(data.data[0]);
+        } catch (error) {
+            console.error('Error fetching Teacher:', error);
+        }
+    }
+
+    useEffect(() => {
+        if (id)
+            fetchData();
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handlePhoto = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => setForm((prev) => ({ ...prev, photo: reader.result }));
-        reader.readAsDataURL(file);
-    };
+    const handelFile = (e) => {
+        setSelectedFile(e.target.files)
+    }
 
     const resetForm = () => {
         setForm(emptyForm);
@@ -53,58 +64,26 @@ export default function TeacherManagement() {
     };
 
     // Add / Edit
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
+        /* handel image/file */
+        for (let i = 0; i < selectedfile.length; i++) {
+            formData.append('files[]', selectedfile[i])
+        }
+        // const data = Object.fromEntries(formData.entries());
+        let url = '';
+        if (id) {
+            url = 'Teacher/update.php?id=' + id;
+        } else {
+            url = 'Teacher/create.php';
+        }
+        let response = await axios.post(url, formData);
 
-        fetch('http://localhost/school_management/Teacher/create.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Success:', data);
-                // Optionally, you can redirect the user to another page or show a success message here
-                window.location.href = '/teacher';
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
+        window.location.href = '/teacher';
     };
 
-    const handleEdit = (teacher) => {
-        setForm(teacher);
-        setEditingId(teacher.id);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    };
 
-    // Delete
-    const handleDelete = (id) => {
-        if (!window.confirm("Are you sure you want to delete this teacher?")) return;
-        setTeachers((prev) => prev.filter((t) => t.id !== id));
-        if (editingId === id) resetForm();
-        if (viewTeacher && viewTeacher.id === id) setViewTeacher(null);
-    };
-
-    // Search
-    const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        if (!q) return teachers;
-        return teachers.filter((t) =>
-            [t.name, t.subject, t.qualification, t.phone, t.email]
-                .join(" ")
-                .toLowerCase()
-                .includes(q)
-        );
-    }, [teachers, search]);
-
-    const formatSalary = (v) => (v === "" || v == null ? "-" : `৳ ${Number(v).toLocaleString()}`);
-    const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-GB") : "-");
 
     return (
         <div className="container-fluid py-4">
@@ -148,9 +127,9 @@ export default function TeacherManagement() {
                                     </select>
                                 </Field>
 
-                                <Field label="Subject">
-                                    <select className="form-select" name="subject"
-                                        value={form.subject} onChange={handleChange} required>
+                                <Field label="main_subject">
+                                    <select className="form-select" name="main_subject"
+                                        value={form.main_subject} onChange={handleChange} required>
                                         <option value="">Select Subject</option>
                                         {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
                                     </select>
@@ -178,9 +157,9 @@ export default function TeacherManagement() {
 
                                 <Field label="Teacher Photo">
                                     <input type="file" className="form-control" accept="image/*"
-                                        onChange={handlePhoto} />
+                                        onChange={handelFile} />
                                     {form.photo && (
-                                        <img src={form.photo} alt="Preview" className="mt-2 rounded border"
+                                        <img src={`${import.meta.env.VITE_API_URL}${form.photo}`} alt="Preview" className="mt-2 rounded border"
                                             style={{ width: 90, height: 90, objectFit: "cover" }} />
                                     )}
                                 </Field>

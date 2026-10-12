@@ -41,11 +41,14 @@ export default function StudentForm() {
     const [selectedfile, setSelectedFile] = useState([]);// image file
 
 
-    function fetchData() {
-        fetch('http://localhost/school_management/students/single.php?id=' + id)
-            .then(response => response.json())
-            .then(data => setStudents(data.data[0]))
-            .catch(error => console.error('Error fetching student:', error));
+    const fetchData = async () => {
+        try {
+            const response = await axios.get('Student/single.php?id=' + id);
+            const data = await response.data;
+            setForm(data.data[0]);
+        } catch (error) {
+            console.error('Error fetching student:', error);
+        }
     }
 
     useEffect(() => {
@@ -73,17 +76,21 @@ export default function StudentForm() {
     // Add / Edit
     const handleSubmit = async (e) => {
         e.preventDefault();
-        e.preventDefault();
         const formData = new FormData(e.target);
         /* handel image/file */
         for (let i = 0; i < selectedfile.length; i++) {
             formData.append('files[]', selectedfile[i])
         }
         // const data = Object.fromEntries(formData.entries());
-        let url = 'Student/create.php';
-        let response = await axios.post(`Student/create.php`, formData);
+        let url = '';
+        if (id) {
+            url = 'Student/update.php?id=' + id;
+        } else {
+            url = 'Student/create.php';
+        }
+        let response = await axios.post(url, formData);
 
-        window.location.href = '/students';
+        window.location.href = '/student';
     };
 
 
@@ -169,8 +176,8 @@ export default function StudentForm() {
                                 </Field>
 
                                 <Field label="Address">
-                                    <textarea className="form-control" rows="2" name="guardianAddress"
-                                        placeholder="Address" value={form.guardianAddress}
+                                    <textarea className="form-control" rows="2" name="address"
+                                        placeholder="Address" value={form.address}
                                         onChange={handleChange} />
                                 </Field>
 
@@ -178,7 +185,7 @@ export default function StudentForm() {
                                     <input type="file" className="form-control" accept="image/*"
                                         onChange={handelFile} />
                                     {form.photo && (
-                                        <img src={form.photo} alt="Preview" className="mt-2 rounded border"
+                                        <img src={`${import.meta.env.VITE_API_URL}${form.photo}`} alt="Preview" className="mt-2 rounded border"
                                             style={{ width: 90, height: 90, objectFit: "cover" }} />
                                     )}
                                 </Field>

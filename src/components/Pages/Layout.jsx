@@ -1,21 +1,26 @@
 import React from 'react';
-import Sidebar from "../components/Sidebar.jsx";
-import Header from "../components/Header.jsx";
-import Footer from "../components/Footer.jsx";
+import Sidebar from "../Sidebar.jsx";
+import Header from "../Header.jsx";
+import Footer from "../Footer.jsx";
+import PageHeading from "../PageHeading.jsx";
 
 function Layout({ children }) {
 
 
     return (
-        <div className="wrapper">
+        <div id="app">
             <Sidebar />
-            <div className="main-panel">
+            <div id="main">
                 <Header />
+                <PageHeading heading="Dashboard" />
                 {children}
+
+
+
+
                 <Footer />
             </div>
         </div>
-
     )
 }
 

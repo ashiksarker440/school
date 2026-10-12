@@ -1,37 +1,42 @@
 import { useState, useMemo, useEffect } from "react";
-import { NavLink } from 'react-router'
-
+import { NavLink, Link } from 'react-router'
+import axios from '../../../Lib/axios';
 export default function TeacherManagement() {
     const [teachers, setTeachers] = useState([]);
     const [editingId, setEditingId] = useState(null);
     const [search, setSearch] = useState("");
     const [viewTeacher, setViewTeacher] = useState(null);
 
-    function fetchData() {
-        fetch('http://localhost/school_management/teacher/index.php')
-            .then(response => response.json())
-            .then(data => setTeachers(data.data))
-            .catch(error => console.error('Error fetching teachers:', error));
+    async function fetchData() {
+        try {
+            const response = await axios.get('Teacher/index.php');
+            setTeachers(response.data.data);
+        } catch (error) {
+            console.error('Error fetching teachers:', error);
+        }
     }
 
     useEffect(() => {
         fetchData();
-    }
-        , []);
+    }, []);
 
-
-    const handleEdit = (teacher) => {
-        setForm(teacher);
-        setEditingId(teacher.id);
+    //Edit  
+    const handleEdit = (teachers) => {
+        setForm(teachers);
+        setEditingId(teachers.id);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     // Delete
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this teacher?")) return;
-        setTeachers((prev) => prev.filter((t) => t.id !== id));
-        if (editingId === id) resetForm();
-        if (viewTeacher && viewTeacher.id === id) setViewTeacher(null);
+
+        try {
+            await axios.delete(`Teacher/delete.php?id=${id}`);
+            await fetchData();
+        } catch (error) {
+            console.error('Error deleting teacher:', error);
+        }
     };
 
     // Search
@@ -82,19 +87,19 @@ export default function TeacherManagement() {
                                         filtered.map((t) => (
                                             <tr key={t.id}>
                                                 <td>
-                                                {t.photo ? (
-                                                    <img src={`${import.meta.env.VITE_API_URL}${t.photo}`} alt={t.name} className="rounded-circle"
-                                                        style={{ width: 40, height: 40, objectFit: "cover" }} />
-                                                ) : "-"}
-                                            </td>
+                                                    {t.photo ? (
+                                                        <img src={`${import.meta.env.VITE_API_URL}${t.photo}`} alt={t.name} className="rounded-circle"
+                                                            style={{ width: 40, height: 40, objectFit: "cover" }} />
+                                                    ) : "-"}
+                                                </td>
                                                 <td>{t.name}</td>
                                                 <td>{t.main_subject}</td>
                                                 <td>{t.qualification}</td>
                                                 <td>{t.joining_date}</td>
                                                 <td>{t.guardian_phone}</td>
                                                 <td className="text-end text-nowrap">
-                                                    <button className="btn btn-sm btn-info me-1" onClick={() => setViewTeacher(t)}>View</button>
-                                                    <button className="btn btn-sm btn-warning me-1" onClick={() => handleEdit(t)}>Edit</button>
+                                                    <Link className="btn btn-sm btn-info me-1" to={`/teacher/${t.id}`}>View</Link>
+                                                    <Link className="btn btn-sm btn-warning me-1" to={`/teacher/edit/${t.id}`}>Edit</Link>
                                                     <button className="btn btn-sm btn-danger" onClick={() => handleDelete(t.id)}>Delete</button>
                                                 </td>
                                             </tr>
