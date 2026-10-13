@@ -1,94 +1,78 @@
-import { useState } from "react";
-import {
-    DEMO_STUDENTS,
-    STATUS,
-    ClassSectionPicker,
-    useAttendance,
-    getStats,
-    percent,
-    todayStr,
-} from "./AttendanceForm";
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router";
+import axios from "../../../Lib/axios";
+import Layout from "../Layout";
 
+const STATUS_BADGE = {
+    Present: "bg-success",
+    Absent: "bg-danger",
+    Late: "bg-warning text-dark",
+};
 
-export default function AttendanceShow({ students = DEMO_STUDENTS }) {
-    const attendance = useAttendance();
+const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-GB") : "-");
 
-    const [month, setMonth] = useState(todayStr().slice(0, 7));
-    const [mrClass, setMrClass] = useState("Class 1");
-    const [mrSection, setMrSection] = useState("A");
+export default function AttendanceShow() {
+    const [viewAttendance, setViewAttendance] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    const mrStudents = students.filter((s) => s.classId === mrClass && s.section === mrSection);
+    let { id } = useParams();
 
-    const [year, mon] = month.split("-").map(Number);
-    const daysInMonth = new Date(year, mon, 0).getDate();
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-    const monthLabel = new Date(year, mon - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+    const fetchData = async () => {
+        try {
+            const response = await axios.get("Attendance/single.php?id=" + id);
+            const data = await response.data;
+            setViewAttendance(data.data[0] || null);
+        } catch (error) {
+            console.error("Error fetching attendance:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (id) fetchData();
+    }, [id]);
 
     return (
-        <div className="container-fluid py-4">
-            <div className="card shadow-sm">
-                <div className="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <h5 className="mb-0">Monthly Attendance Report</h5>
-                    <button type="button" className="btn btn-sm btn-light" onClick={() => window.print()}>Print</button>
-                </div>
-                <div className="card-body">
-                    <div className="row g-3 mb-3">
-                        <div className="col-sm-12 col-md-3">
-                            <label className="form-label">Month</label>
-                            <input type="month" className="form-control" value={month}
-                                onChange={(e) => e.target.value && setMonth(e.target.value)} />
-                        </div>
-                        <ClassSectionPicker classId={mrClass} section={mrSection}
-                            onClass={setMrClass} onSection={setMrSection} />
-                    </div>
-
-                    <h6 className="mb-3">{mrClass} - Section {mrSection} | {monthLabel}</h6>
-
-                    <div className="table-responsive">
-                        <table className="table table-bordered table-sm align-middle text-center" style={{ fontSize: 13 }}>
-                            <thead className="table-light">
-                                <tr>
-                                    <th className="text-start">Name</th>
-                                    {days.map((d) => <th key={d}>{d}</th>)}
-                                    <th className="text-success">P</th>
-                                    <th className="text-danger">A</th>
-                                    <th className="text-warning">L</th>
-                                    <th>%</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {mrStudents.length === 0 ? (
-                                    <tr><td colSpan={daysInMonth + 5} className="text-muted py-4">No students found.</td></tr>
+        <Layout>
+            <div className="container-fluid py-4">
+                <div className="row">
+                    {/* ===== Attendance Details ===== */}
+                    <div className="col-lg-12">
+                        <div className="card shadow-sm h-100">
+                            <div className="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                <h5 className="mb-0">Attendance Details</h5>
+                                <div className="d-flex gap-2">
+                                    <button type="button" className="btn btn-sm btn-light" onClick={() => window.print()}>
+                                        Print
+                                    </button>
+                                    <Link className="btn btn-sm btn-outline-light" to="/attendance">Back</Link>
+                                </div>
+                            </div>
+                            <div className="card-body">
+                                {loading ? (
+                                    <p className="text-muted mb-0">Loading...</p>
+                                ) : !viewAttendance ? (
+                                    <p className="text-muted mb-0">Attendance record paoa jayni.</p>
                                 ) : (
-                                    mrStudents.map((s) => {
-                                        const st = getStats(attendance, s.id, month);
-                                        const p = percent(st);
-                                        return (
-                                            <tr key={s.id}>
-                                                <td className="text-start text-nowrap">{s.name}</td>
-                                                {days.map((d) => {
-                                                    const key = `${month}-${String(d).padStart(2, "0")}|${s.id}`;
-                                                    const status = attendance[key];
-                                                    return (
-                                                        <td key={d} className={status ? `fw-bold ${STATUS[status].text}` : "text-muted"}>
-                                                            {status ? STATUS[status].letter : "·"}
-                                                        </td>
-                                                    );
-                                                })}
-                                                <td>{st.Present}</td>
-                                                <td>{st.Absent}</td>
-                                                <td>{st.Late}</td>
-                                                <td className="fw-bold">{p === null ? "-" : `${p}%`}</td>
-                                            </tr>
-                                        );
-                                    })
+                                    <div>
+                                        <h5 className="mb-3">{viewAttendance.name}</h5>
+                                        <p className="mb-1"><strong>Date:</strong> {formatDate(viewAttendance.date)}</p>
+                                        <p className="mb-1"><strong>Admission No:</strong> {viewAttendance.admission_no}</p>
+                                        <p className="mb-1"><strong>Class & Section:</strong> {viewAttendance.class_section || "-"}</p>
+                                        <p className="mb-0">
+                                            <strong>Status:</strong>{" "}
+                                            <span className={`badge ${STATUS_BADGE[viewAttendance.status] || "bg-secondary"}`}>
+                                                {viewAttendance.status || "Not Marked"}
+                                            </span>
+                                        </p>
+                                    </div>
                                 )}
-                            </tbody>
-                        </table>
+                            </div>
+                        </div>
                     </div>
-                    <small className="text-muted">P = Present, A = Absent, L = Late, · = Not marked</small>
                 </div>
             </div>
-        </div>
+        </Layout>
     );
 }

@@ -65,6 +65,7 @@ function App() {
         <Route path="Attendance">
           <Route index element={<AttendanceList />} />
           <Route path="create" element={<AttendanceForm />} />
+          <Route path="edit/:id" element={<AttendanceForm />} />
           <Route path=":id" element={<AttendanceShow />} />
         </Route>
         <Route path="Exam">

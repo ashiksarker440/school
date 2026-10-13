@@ -23,7 +23,7 @@ export default function Login() {
         localStorage.setItem("access_token", res.data.jwt);
         let role = res.data.role
 
-        if (role === "admin") window.location.href = "/admin/dashboard";
+        if (role === "admin") window.location.href = "/dashboard";
         else if (role === "teacher") window.location.href = "/dashboard";
         else window.location.href = "/student/dashboard";
       } else {

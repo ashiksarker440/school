@@ -1,86 +1,71 @@
-import { useState } from "react";
-import {
-    DEMO_STUDENTS,
-    ClassSectionPicker,
-    StatusBadge,
-    useAttendance,
-    getStats,
-    percent,
-    todayStr,
-    formatDate,
-} from "./AttendanceForm";
+import { useState, useMemo, useEffect } from "react";
+import { NavLink, Link } from "react-router";
+import axios from "../../../Lib/axios";
+import Layout from "../Layout";
 
+const STATUS_BADGE = {
+    Present: "bg-success",
+    Absent: "bg-danger",
+    Late: "bg-warning text-dark",
+};
 
-export default function AttendanceList({ students = DEMO_STUDENTS }) {
-    const attendance = useAttendance();
-    const [tab, setTab] = useState("date");
+const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-GB") : "-");
 
-    // ----- Date-wise -----
-    const [dwDate, setDwDate] = useState(todayStr());
-    const [dwClass, setDwClass] = useState("");
-    const [dwSection, setDwSection] = useState("");
+export default function AttendanceList() {
+    const [attendance, setAttendance] = useState([]);
+    const [search, setSearch] = useState("");
 
-    // ----- Class-wise -----
-    const [cwClass, setCwClass] = useState("Class 1");
-    const [cwSection, setCwSection] = useState("A");
+    async function fetchData() {
+        try {
+            const response = await axios.get("Attendance/index.php");
+            setAttendance(response.data.data || []);
+        } catch (error) {
+            console.error("Error fetching attendance:", error);
+        }
+    }
 
-    // Date-wise rows
-    const dwStudents = students.filter(
-        (s) => (!dwClass || s.classId === dwClass) && (!dwSection || s.section === dwSection)
-    );
-    const dwCounts = { Present: 0, Absent: 0, Late: 0, "Not Marked": 0 };
-    dwStudents.forEach((s) => {
-        const st = attendance[`${dwDate}|${s.id}`];
-        dwCounts[st || "Not Marked"]++;
-    });
+    useEffect(() => {
+        fetchData();
+    }, []);
 
-    // Class-wise rows
-    const cwStudents = students.filter((s) => s.classId === cwClass && s.section === cwSection);
+    // Delete
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this attendance?")) return;
 
-    const tabs = [
-        { id: "date", label: "Date-wise" },
-        { id: "class", label: "Class-wise" },
-    ];
+        try {
+            await axios.delete(`Attendance/delete.php?id=${id}`);
+            await fetchData();
+        } catch (error) {
+            console.error("Error deleting attendance:", error);
+        }
+    };
+
+    // Search
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return attendance;
+        return attendance.filter((a) =>
+            [a.date, a.admission_no, a.name, a.class_section, a.status]
+                .join(" ")
+                .toLowerCase()
+                .includes(q)
+        );
+    }, [attendance, search]);
 
     return (
-        <div className="container-fluid py-4">
-            <ul className="nav nav-tabs mb-3">
-                {tabs.map((t) => (
-                    <li className="nav-item" key={t.id}>
-                        <button type="button" className={`nav-link ${tab === t.id ? "active" : ""}`}
-                            onClick={() => setTab(t.id)}>
-                            {t.label}
-                        </button>
-                    </li>
-                ))}
-            </ul>
-
-            
-            {tab === "date" && (
+        <Layout>
+            <div className="container-fluid py-4">
+                {/* ===== Attendance List + Search ===== */}
                 <div className="card shadow-sm">
-                    <div className="card-header bg-success text-white">
-                        <h5 className="mb-0">Date-wise Attendance</h5>
+                    <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h5 className="mb-0">Attendance List</h5>
+                        <NavLink className="btn btn-primary" to="./create">Add new</NavLink>
+                        <input type="text" className="form-control w-auto" placeholder="Search attendance..."
+                            value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
-                    <div className="card-body">
-                        <div className="row g-3 mb-3">
-                            <div className="col-sm-12 col-md-3">
-                                <label className="form-label">Date</label>
-                                <input type="date" className="form-control" value={dwDate}
-                                    onChange={(e) => e.target.value && setDwDate(e.target.value)} />
-                            </div>
-                            <ClassSectionPicker classId={dwClass} section={dwSection}
-                                onClass={setDwClass} onSection={setDwSection} allowAll />
-                        </div>
-
-                        <div className="d-flex flex-wrap gap-2 mb-3">
-                            <span className="badge bg-success fs-6">Present: {dwCounts.Present}</span>
-                            <span className="badge bg-danger fs-6">Absent: {dwCounts.Absent}</span>
-                            <span className="badge bg-warning text-dark fs-6">Late: {dwCounts.Late}</span>
-                            <span className="badge bg-secondary fs-6">Not Marked: {dwCounts["Not Marked"]}</span>
-                        </div>
-
+                    <div className="card-body p-0">
                         <div className="table-responsive">
-                            <table className="table table-striped table-hover align-middle">
+                            <table className="table table-striped table-hover align-middle mb-0">
                                 <thead className="table-light">
                                     <tr>
                                         <th>Date</th>
@@ -88,19 +73,31 @@ export default function AttendanceList({ students = DEMO_STUDENTS }) {
                                         <th>Name</th>
                                         <th>Class & Section</th>
                                         <th>Status</th>
+                                        <th className="text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {dwStudents.length === 0 ? (
-                                        <tr><td colSpan="5" className="text-center text-muted py-4">No students found.</td></tr>
+                                    {filtered.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" className="text-center text-muted py-4">No attendance found.</td>
+                                        </tr>
                                     ) : (
-                                        dwStudents.map((s) => (
-                                            <tr key={s.id}>
-                                                <td>{formatDate(dwDate)}</td>
-                                                <td>{s.admissionNumber}</td>
-                                                <td>{s.name}</td>
-                                                <td>{s.classId} - {s.section}</td>
-                                                <td><StatusBadge status={attendance[`${dwDate}|${s.id}`]} /></td>
+                                        filtered.map((a) => (
+                                            <tr key={a.id}>
+                                                <td>{formatDate(a.date)}</td>
+                                                <td>{a.admission_no}</td>
+                                                <td>{a.name}</td>
+                                                <td>{a.class_section}</td>
+                                                <td>
+                                                    <span className={`badge ${STATUS_BADGE[a.status] || "bg-secondary"}`}>
+                                                        {a.status || "Not Marked"}
+                                                    </span>
+                                                </td>
+                                                <td className="text-end text-nowrap">
+                                                    <Link className="btn btn-sm btn-info me-1" to={`/attendance/${a.id}`}>View</Link>
+                                                    <Link className="btn btn-sm btn-warning me-1" to={`/attendance/edit/${a.id}`}>Edit</Link>
+                                                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(a.id)}>Delete</button>
+                                                </td>
                                             </tr>
                                         ))
                                     )}
@@ -109,67 +106,7 @@ export default function AttendanceList({ students = DEMO_STUDENTS }) {
                         </div>
                     </div>
                 </div>
-            )}
-
-           
-            {tab === "class" && (
-                <div className="card shadow-sm">
-                    <div className="card-header bg-info text-white">
-                        <h5 className="mb-0">Class-wise Attendance</h5>
-                    </div>
-                    <div className="card-body">
-                        <div className="row g-3 mb-3">
-                            <ClassSectionPicker classId={cwClass} section={cwSection}
-                                onClass={setCwClass} onSection={setCwSection} />
-                        </div>
-
-                        <div className="table-responsive">
-                            <table className="table table-striped table-hover align-middle">
-                                <thead className="table-light">
-                                    <tr>
-                                        <th>Admission No</th>
-                                        <th>Name</th>
-                                        <th className="text-center">Present</th>
-                                        <th className="text-center">Absent</th>
-                                        <th className="text-center">Late</th>
-                                        <th style={{ minWidth: 160 }}>Attendance %</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {cwStudents.length === 0 ? (
-                                        <tr><td colSpan="6" className="text-center text-muted py-4">No students found.</td></tr>
-                                    ) : (
-                                        cwStudents.map((s) => {
-                                            const st = getStats(attendance, s.id);
-                                            const p = percent(st);
-                                            return (
-                                                <tr key={s.id}>
-                                                    <td>{s.admissionNumber}</td>
-                                                    <td>{s.name}</td>
-                                                    <td className="text-center">{st.Present}</td>
-                                                    <td className="text-center">{st.Absent}</td>
-                                                    <td className="text-center">{st.Late}</td>
-                                                    <td>
-                                                        {p === null ? (
-                                                            <span className="text-muted">-</span>
-                                                        ) : (
-                                                            <div className="progress" style={{ height: 20 }}>
-                                                                <div className={`progress-bar ${p >= 75 ? "bg-success" : "bg-danger"}`}
-                                                                    style={{ width: `${p}%` }}>{p}%</div>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        <small className="text-muted">Late ke attend hishebe dhora hoyeche. 75%-er niche hole lal dekhabe.</small>
-                    </div>
-                </div>
-            )}
-        </div>
+            </div>
+        </Layout>
     );
 }
