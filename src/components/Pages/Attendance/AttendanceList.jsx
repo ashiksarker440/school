@@ -52,6 +52,7 @@ export default function AttendanceList() {
         );
     }, [attendance, search]);
 
+
     return (
         <Layout>
             <div className="container-fluid py-4">
@@ -89,9 +90,18 @@ export default function AttendanceList() {
                                                 <td>{a.name}</td>
                                                 <td>{a.class_section}</td>
                                                 <td>
-                                                    <span className={`badge ${STATUS_BADGE[a.status] || "bg-secondary"}`}>
-                                                        {a.status || "Not Marked"}
-                                                    </span>
+                                                    {
+                                                        a.status == 1 ? (
+                                                            <span className={`badge ${STATUS_BADGE['present'] || "bg-secondary"}`}>
+                                                                {"present" || "Not Marked"}
+                                                            </span>
+                                                        ) : (
+                                                            <span className={`badge ${STATUS_BADGE['absent'] || "bg-secondary"}`}>
+                                                                {'Absent' || "Not Marked"}
+                                                            </span>
+                                                        )
+                                                    }
+
                                                 </td>
                                                 <td className="text-end text-nowrap">
                                                     <Link className="btn btn-sm btn-info me-1" to={`/attendance/${a.id}`}>View</Link>
