@@ -9,6 +9,7 @@ function Sidebar() {
                             <a href="index.html"><img src="assets/images/logo/logo.png" alt="Logo" /></a>
                         </div>
                         <div className="toggler">
+
                             <a href="#" className="sidebar-hide d-xl-none d-block"><i className="bi bi-x bi-middle"></i></a>
                         </div>
                     </div>
@@ -18,10 +19,10 @@ function Sidebar() {
                         <li className="sidebar-title">Menu</li>
 
                         <li className="sidebar-item active ">
-                            <a href={'./dashboard'} className='sidebar-link'>
+                            <NavLink to='/dashboard' className='sidebar-link'>
                                 <i className="bi bi-grid-fill"></i>
                                 <span>Dashboard</span>
-                            </a>
+                            </NavLink>
                         </li>
 
                         <li className="sidebar-item  ">
@@ -66,6 +67,15 @@ function Sidebar() {
                         </li>
 
 
+                    </ul>
+
+                    <ul className="menu">
+                        <li className="sidebar-item  ">
+                            <NavLink to="/logout  " className='sidebar-link'>
+                                <i className="bi bi-lock"></i>
+                                <span>Logout</span>
+                            </NavLink >
+                        </li>
                     </ul>
                 </div>
                 <button className="sidebar-toggler btn x"><i data-feather="x"></i></button>

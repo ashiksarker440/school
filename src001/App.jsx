@@ -25,61 +25,67 @@ import ResultShow from './components/Pages/Result/ResultShow'
 import { BrowserRouter, Routes, Route } from "react-router";
 
 function App() {
+  const [ isSignedIn, setIsSignedIn ] = useState(()=> {
+    /* if you want, user will be logged in until they logout*/
+    return localStorage.getItem("access_token") == 'undefined' || localStorage.getItem("access_token") == null ? false : true;
+    /* if you want, user will be logged when they close the browser*/
+    //return sessionStorage.getItem("access_token") || false;
+  });
 
 
   return (
-    <BrowserRouter>
-      <div id="app">
-        <Sidebar />
-        <div id="main">
-          <Header />
-          <PageHeading heading="Dashboard" />
+      <BrowserRouter>
+          <div id="app">
+            <Sidebar />
+            <div id="main">
+              <Header />
+              <PageHeading heading="Dashboard" />
 
-          <Routes>
-            <Route index element={<Dashboard />} />
-            <Route path="student">
-              <Route index element={<StudentList />} />
-              <Route path="create" element={<StudentForm />} />
-              <Route path="edit/:id" element={<StudentForm />} />
-              <Route path=":id" element={<StudentShow />} />
-            </Route>
-            <Route path="teacher">
-              <Route index element={<TeacherList />} />
-              <Route path="create" element={<TeacherFrom />} />
-              <Route path=":id" element={<TeacherShow />} />
-            </Route>
-            <Route path="Attendance">
-              <Route index element={<AttendanceList />} />
-              <Route path="create" element={<AttendanceForm />} />
-              <Route path=":id" element={<AttendanceShow />} />
-            </Route>
-            <Route path="Exam">
-              <Route index element={<ExamList />} />
-              <Route path="create" element={<ExamForm />} />
-              <Route path=":id" element={<ExamShow />} />
-            </Route>
-            <Route path="Result">
-              <Route index element={<ResultList />} />
-              <Route path="create" element={<ResultForm />} />
-              <Route path=":id" element={<ResultShow />} />
-            </Route>
+              <Routes>
+                <Route index element={<Dashboard />} />
+                <Route path="student">
+                  <Route index element={<StudentList />} />
+                  <Route path="create" element={<StudentForm />} />
+                  <Route path="edit/:id" element={<StudentForm />} />
+                  <Route path=":id" element={<StudentShow />} />
+                </Route>
+                <Route path="teacher">
+                  <Route index element={<TeacherList />} />
+                  <Route path="create" element={<TeacherFrom />} />
+                  <Route path=":id" element={<TeacherShow />} />
+                </Route>
+                <Route path="Attendance">
+                  <Route index element={<AttendanceList />} />
+                  <Route path="create" element={<AttendanceForm />} />
+                  <Route path=":id" element={<AttendanceShow />} />
+                </Route>
+                <Route path="Exam">
+                  <Route index element={<ExamList />} />
+                  <Route path="create" element={<ExamForm />} />
+                  <Route path=":id" element={<ExamShow />} />
+                </Route>
+                <Route path="Result">
+                  <Route index element={<ResultList />} />
+                  <Route path="create" element={<ResultForm />} />
+                  <Route path=":id" element={<ResultShow />} />
+                </Route>
 
-            {/* <Route element={<AuthLayout />}>
-              <Route path="login" element={<Login />} />
-              <Route path="register" element={<Register />} />
-            </Route> */}
-
-
-          </Routes>
+                {/* <Route element={<AuthLayout />}>
+                  <Route path="login" element={<Login />} />
+                  <Route path="register" element={<Register />} />
+                </Route> */}
 
 
-
-          <Footer />
-        </div>
-      </div>
+              </Routes>
 
 
-    </BrowserRouter>
+
+              <Footer />
+            </div>
+          </div>
+
+
+      </BrowserRouter>
   )
 }
 
