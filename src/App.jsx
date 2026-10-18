@@ -71,11 +71,13 @@ function App() {
         <Route path="Exam">
           <Route index element={<ExamList />} />
           <Route path="create" element={<ExamForm />} />
+          <Route path="edit/:id" element={<ExamForm />} />
           <Route path=":id" element={<ExamShow />} />
         </Route>
         <Route path="Result">
           <Route index element={<ResultList />} />
           <Route path="create" element={<ResultForm />} />
+          <Route path="edit/:id" element={<ResultForm />} />
           <Route path=":id" element={<ResultShow />} />
         </Route>
 
