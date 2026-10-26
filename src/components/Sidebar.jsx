@@ -57,6 +57,18 @@ function Sidebar() {
 
                             </NavLink >
                         </li>
+                        <li className="sidebar-item">
+                            <NavLink to="/exam-subject-marks" className='sidebar-link'>
+                                <i className="bi bi-journal-check"></i>
+                                <span>Exam Subject Marks</span>
+                            </NavLink>
+                        </li>
+                        <li className="sidebar-item">
+                            <NavLink to="/student-subject-marks" className='sidebar-link'>
+                                <i className="bi bi-pencil-square"></i>
+                                <span>Student Exam Marks</span>
+                            </NavLink>
+                        </li>
                         <li className="sidebar-item  ">
                             <NavLink to="/Result  " className='sidebar-link'>
 

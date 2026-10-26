@@ -1,116 +1,136 @@
-import { useState, useMemo, useEffect } from "react";
-import { NavLink, Link } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, NavLink } from "react-router";
 import axios from "../../../Lib/axios";
 import Layout from "../Layout";
 
-const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-GB") : "-");
-
-// "14:30:00" -> "2:30 PM"
-const formatTime = (t) => {
-    if (!t) return "-";
-    const [h, m] = t.split(":").map(Number);
-    const ampm = h >= 12 ? "PM" : "AM";
-    return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+const formatDateTime = (value) => {
+    if (!value) return "-";
+    const date = new Date(String(value).replace(" ", "T"));
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-GB");
 };
 
 export default function ExamList() {
     const [exams, setExams] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [error, setError] = useState("");
 
-    async function fetchData() {
+    const fetchData = async () => {
         try {
             const response = await axios.get("Exam/index.php");
-            setExams(response.data.data || []);
-        } catch (error) {
-            console.error("Error fetching exams:", error);
-        }
-    }
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    // Delete
-    const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this exam?")) return;
-
-        try {
-            await axios.delete(`Exam/delete.php?id=${id}`);
-            await fetchData();
-        } catch (error) {
-            console.error("Error deleting exam:", error);
+            if (!response.data.status) {
+                return { exams: [], error: response.data.message || "Could not load exams." };
+            }
+            return { exams: response.data.data || [], error: "" };
+        } catch (requestError) {
+            console.error("Error fetching exams:", requestError);
+            return { exams: [], error: requestError.response?.data?.message || "Could not load exams." };
         }
     };
 
-    // Search
+    useEffect(() => {
+        let active = true;
+        fetchData().then((data) => {
+            if (!active) return;
+            setExams(data.exams);
+            setError(data.error);
+            setLoading(false);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this exam?")) return;
+
+        setError("");
+        try {
+            const response = await axios.delete(`Exam/delete.php?id=${encodeURIComponent(id)}`);
+            if (!response.data.status) {
+                setError(response.data.message || "Exam could not be deleted.");
+                return;
+            }
+            const data = await fetchData();
+            setExams(data.exams);
+            setError(data.error);
+        } catch (requestError) {
+            console.error("Error deleting exam:", requestError);
+            setError(requestError.response?.data?.message || "Exam could not be deleted.");
+        }
+    };
+
     const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        if (!q) return exams;
-        return exams.filter((e) =>
-            [e.exam_name, e.type, e.class_id, e.subject, e.date]
-                .join(" ")
-                .toLowerCase()
-                .includes(q)
+        const query = search.trim().toLowerCase();
+        if (!query) return exams;
+        return exams.filter((exam) =>
+            [exam.id, exam.exam_name, exam.type].join(" ").toLowerCase().includes(query)
         );
     }, [exams, search]);
 
     return (
         <Layout>
             <div className="container-fluid py-4">
-                {/* ===== Exam List + Search ===== */}
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h4 className="mb-0">Exam List</h4>
+                    <NavLink className="btn btn-primary" to="./create">Add new</NavLink>
+                </div>
+
+                {error && <div className="alert alert-danger" role="alert">{error}</div>}
+
                 <div className="card shadow-sm">
-                    <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <h5 className="mb-0">Exam List</h5>
-                        <NavLink className="btn btn-primary" to="./create">Add new</NavLink>
-                        <input type="text" className="form-control w-auto" placeholder="Search exam..."
-                            value={search} onChange={(e) => setSearch(e.target.value)} />
-                    </div>
-                    <div className="card-body p-0">
+                    <div className="card-body">
+                        <div className="row g-3 mb-3">
+                            <div className="col-md-6">
+                                <input
+                                    type="search"
+                                    className="form-control"
+                                    placeholder="Search by ID, exam name, or type..."
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                />
+                            </div>
+                            <div className="col-md-6 text-md-end text-muted align-self-center">
+                                {filtered.length} exam{filtered.length === 1 ? "" : "s"}
+                            </div>
+                        </div>
                         <div className="table-responsive">
                             <table className="table table-striped table-hover align-middle mb-0">
                                 <thead className="table-light">
                                     <tr>
+                                        <th>ID</th>
                                         <th>Exam Name</th>
                                         <th>Type</th>
-                                        <th>Class</th>
-                                        <th>Subject</th>
-                                        <th>Date</th>
-                                        <th>Time</th>
-                                        <th>Marks</th>
-                                        <th>Status</th>
+                                        <th>Created At</th>
+                                        <th>Deleted At</th>
                                         <th className="text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filtered.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="9" className="text-center text-muted py-4">No exams found.</td>
+                                    {loading ? (
+                                        <tr><td colSpan="6" className="text-center py-4">Loading...</td></tr>
+                                    ) : filtered.length === 0 ? (
+                                        <tr><td colSpan="6" className="text-center text-muted py-4">No exams found.</td></tr>
+                                    ) : filtered.map((exam) => (
+                                        <tr key={exam.id}>
+                                            <td>{exam.id}</td>
+                                            <td>{exam.exam_name}</td>
+                                            <td>{exam.type || "-"}</td>
+                                            <td className="text-nowrap">{formatDateTime(exam.created_at)}</td>
+                                            <td className="text-nowrap">{formatDateTime(exam.deleted_at)}</td>
+                                            <td className="text-end text-nowrap">
+                                                <Link className="btn btn-sm btn-info me-1" to={`/exam/${exam.id}`}>View</Link>
+                                                <Link className="btn btn-sm btn-warning me-1" to={`/exam/edit/${exam.id}`}>Edit</Link>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-danger"
+                                                    onClick={() => handleDelete(exam.id)}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </td>
                                         </tr>
-                                    ) : (
-                                        filtered.map((e) => (
-                                            <tr key={e.id}>
-                                                <td>{e.exam_name}</td>
-                                                <td>{e.type}</td>
-                                                <td>{e.class_id}</td>
-                                                <td>{e.subject}</td>
-                                                <td>{formatDate(e.date)}</td>
-                                                <td className="text-nowrap">{formatTime(e.time)}</td>
-                                                <td>{e.marks}</td>
-                                                <td>
-                                                    {e.status == 1 ? (
-                                                        <span className="badge bg-success">Active</span>
-                                                    ) : (
-                                                        <span className="badge bg-secondary">Inactive</span>
-                                                    )}
-                                                </td>
-                                                <td className="text-end text-nowrap">
-                                                    <Link className="btn btn-sm btn-info me-1" to={`/exam/${e.id}`}>View</Link>
-                                                    <Link className="btn btn-sm btn-warning me-1" to={`/exam/edit/${e.id}`}>Edit</Link>
-                                                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(e.id)}>Delete</button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
+                                    ))}
                                 </tbody>
                             </table>
                         </div>

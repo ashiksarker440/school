@@ -51,6 +51,7 @@ export default function ResultList() {
                 <div className="card shadow-sm">
                     <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <h5 className="mb-0">Result List</h5>
+                        <Link className="btn btn-success" to="/Result/sheet">Print Result Sheet</Link>
                         <NavLink className="btn btn-primary" to="./create">Add new</NavLink>
                         <input type="text" className="form-control w-auto" placeholder="Search result..."
                             value={search} onChange={(e) => setSearch(e.target.value)} />

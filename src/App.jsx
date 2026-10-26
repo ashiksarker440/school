@@ -24,9 +24,14 @@ import AttendanceShow from './components/Pages/Attendance/AttendanceShow'
 import ExamList from './components/Pages/Exam/ExamList'
 import ExamForm from './components/Pages/Exam/ExamForm'
 import ExamShow from './components/Pages/Exam/ExamShow'
+import ExamSubjectMarksList from './components/Pages/ExamSubjectMarks/ExamSubjectMarksList'
+import ExamSubjectMarksForm from './components/Pages/ExamSubjectMarks/ExamSubjectMarksForm'
+import ExamSubjectMarksShow from './components/Pages/ExamSubjectMarks/ExamSubjectMarksShow'
+import StudentSubjectMarksPage from './components/Pages/StudentSubjectMarks/StudentSubjectMarksPage'
 import ResultList from './components/Pages/Result/ResultList'
 import ResultForm from './components/Pages/Result/ResultForm'
 import ResultShow from './components/Pages/Result/ResultShow'
+import ResultSheet from './components/Pages/Result/ResultSheet'
 
 function App() {
   const [isSignedIn, setIsSignedIn] = useState(() => {
@@ -74,10 +79,18 @@ function App() {
           <Route path="edit/:id" element={<ExamForm />} />
           <Route path=":id" element={<ExamShow />} />
         </Route>
+        <Route path="exam-subject-marks">
+          <Route index element={<ExamSubjectMarksList />} />
+          <Route path="create" element={<ExamSubjectMarksForm />} />
+          <Route path="edit/:id" element={<ExamSubjectMarksForm />} />
+          <Route path=":id" element={<ExamSubjectMarksShow />} />
+        </Route>
+        <Route path="student-subject-marks" element={<StudentSubjectMarksPage />} />
         <Route path="Result">
           <Route index element={<ResultList />} />
           <Route path="create" element={<ResultForm />} />
           <Route path="edit/:id" element={<ResultForm />} />
+          <Route path="sheet" element={<ResultSheet />} />
           <Route path=":id" element={<ResultShow />} />
         </Route>
 
