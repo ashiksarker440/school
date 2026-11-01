@@ -37,21 +37,125 @@ function getErrorMessage(error, fallback) {
     return error.response?.data?.message || fallback;
 }
 
+const toPercent = (value, total) => {
+    const v = Number(value);
+    const t = Number(total);
+    if (!t || Number.isNaN(v)) return 0;
+    return Math.min(100, Math.max(0, (v / t) * 100));
+};
+
+function Bar({ percent, low }) {
+    return (
+        <span className={`result-sheet-bar${low ? " is-low" : ""}`} aria-hidden="true">
+            <i style={{ width: `${percent}%` }} />
+        </span>
+    );
+}
+
 function ResultSheetDocument({ result }) {
     const { student, subjects, grade_scales: gradeScales } = result;
-    const passed = student.overall_result === "Pass";
+    const verdictClass =
+        student.overall_result === "Pass"
+            ? "result-sheet-pass"
+            : student.overall_result === "Fail"
+                ? "result-sheet-fail"
+                : "result-sheet-incomplete";
 
     return (
         <article className="result-sheet-print">
             <header className="result-sheet-header">
                 <div className="result-sheet-header-main">
-                    <div className="result-sheet-kicker">ACADEMIC TRANSCRIPT</div>
+                    <div className="result-sheet-kicker">Academic transcript</div>
                     <h1>Examination Result Sheet</h1>
                     <div className="result-sheet-exam">{student.exam_name}</div>
-                    <div className="result-sheet-session">Academic Session: <strong>{student.session_name}</strong></div>
+                    <div className="result-sheet-session">Academic session: <strong>{student.session_name}</strong></div>
                 </div>
+                <div className="result-sheet-seal" aria-label="Overall GPA and grade">
+                    <small>Overall GPA</small>
+                    <span className="result-sheet-seal-gpa">
+                        {student.overall_gpa === null ? "-" : Number(student.overall_gpa).toFixed(2)}
+                    </span>
+                    <span className="result-sheet-seal-grade">Grade {student.overall_grade || "-"}</span>
+                </div>
+            </header>
+
+            <section className="result-sheet-student">
+                <h2>Student's particulars</h2>
+                <dl className="result-sheet-particulars">
+                    <div className="result-sheet-wide"><dt>Student's name</dt><dd>{student.student_name}</dd></div>
+                    <div><dt>Roll no.</dt><dd>{student.roll_no ?? "-"}</dd></div>
+                    <div><dt>Admission no.</dt><dd>{student.admission_number || "-"}</dd></div>
+                    <div><dt>Class</dt><dd>{student.class_name}</dd></div>
+                    <div><dt>Section</dt><dd>{student.section_name}</dd></div>
+                    <div className="result-sheet-wide"><dt>Examination</dt><dd>{student.exam_name}</dd></div>
+                </dl>
+            </section>
+
+            <section className="result-sheet-subjects">
+                <h2>Subject-wise marks and grade</h2>
+                <div className="result-sheet-scroll">
+                    <table className="result-sheet-table result-sheet-subject-table">
+                        <thead>
+                            <tr>
+                                <th className="result-sheet-subject-number">Sl.</th>
+                                <th className="result-sheet-subject-name">Subject</th>
+                                <th>Full<br />marks</th>
+                                <th>Pass<br />marks</th>
+                                <th>Marks<br />obtained</th>
+                                <th>Letter<br />grade</th>
+                                <th>Grade<br />point</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {subjects.map((subject, index) => {
+                                const hasMarks = subject.obtained_marks !== null;
+                                const failed = subject.result_status === "Fail";
+                                return (
+                                    <tr key={subject.subject_id}>
+                                        <td className="result-sheet-subject-number">{String(index + 1).padStart(2, "0")}</td>
+                                        <td className="result-sheet-subject-name">
+                                            <strong>{subject.subject_name}</strong>
+                                            {subject.subject_code && <small>{subject.subject_code}</small>}
+                                        </td>
+                                        <td>{Number(subject.full_marks).toFixed(2)}</td>
+                                        <td>{Number(subject.pass_marks).toFixed(2)}</td>
+                                        <td className="result-sheet-marks-cell">
+                                            <span className="result-sheet-marks">
+                                                {hasMarks ? Number(subject.obtained_marks).toFixed(2) : "-"}
+                                            </span>
+                                            {hasMarks && (
+                                                <Bar
+                                                    percent={toPercent(subject.obtained_marks, subject.full_marks)}
+                                                    low={Number(subject.obtained_marks) < Number(subject.pass_marks)}
+                                                />
+                                            )}
+                                        </td>
+                                        <td>{subject.grade ? <span className="result-sheet-pill">{subject.grade}</span> : "-"}</td>
+                                        <td>{subject.gpa_point === null ? "-" : Number(subject.gpa_point).toFixed(2)}</td>
+                                        <td className={failed ? "result-sheet-status-fail" : subject.result_status === "Pass" ? "result-sheet-status-pass" : ""}>
+                                            {subject.result_status}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colSpan="2">Total marks</th>
+                                <th>{Number(student.total_full_marks).toFixed(2)}</th>
+                                <th>-</th>
+                                <th>{Number(student.total_obtained).toFixed(2)}</th>
+                                <th colSpan="3"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+
+            <div className="result-sheet-lower">
                 <section className="result-sheet-grade-scale" aria-label="Grade scale">
-                    <h2>Grading Scale</h2>
+                    <h2>Grading scale</h2>
                     <table className="result-sheet-table result-sheet-grade-table">
                         <thead>
                             <tr>
@@ -71,105 +175,26 @@ function ResultSheetDocument({ result }) {
                         </tbody>
                     </table>
                 </section>
-            </header>
 
-            <section className="result-sheet-student">
-                <h2>Student's Particulars</h2>
-                <table className="result-sheet-table result-sheet-particulars-table">
-                    <tbody>
-                        <tr>
-                            <th>Student's Name</th>
-                            <td>{student.student_name}</td>
-                            <th>Roll No.</th>
-                            <td>{student.roll_no ?? "-"}</td>
-                        </tr>
-                        <tr>
-                            <th>Admission No.</th>
-                            <td>{student.admission_number || "-"}</td>
-                            <th>Class</th>
-                            <td>{student.class_name}</td>
-                        </tr>
-                        <tr>
-                            <th>Section</th>
-                            <td>{student.section_name}</td>
-                            <th>Examination</th>
-                            <td>{student.exam_name}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-
-            <section className="result-sheet-subjects">
-                <h2>Subject-wise Marks and Grade</h2>
-                <table className="result-sheet-table result-sheet-subject-table">
-                    <thead>
-                        <tr>
-                            <th className="result-sheet-subject-number">Sl.</th>
-                            <th className="result-sheet-subject-name">Subject</th>
-                            <th>Full<br />Marks</th>
-                            <th>Pass<br />Marks</th>
-                            <th>Marks<br />Obtained</th>
-                            <th>Letter<br />Grade</th>
-                            <th>Grade<br />Point</th>
-                            <th>Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {subjects.map((subject, index) => (
-                            <tr key={subject.subject_id}>
-                                <td className="result-sheet-subject-number">{String(index + 1).padStart(2, "0")}</td>
-                                <td className="result-sheet-subject-name">
-                                    <strong>{subject.subject_name}</strong>
-                                    {subject.subject_code && <small>{subject.subject_code}</small>}
-                                </td>
-                                <td>{Number(subject.full_marks).toFixed(2)}</td>
-                                <td>{Number(subject.pass_marks).toFixed(2)}</td>
-                                <td className="result-sheet-marks">
-                                    {subject.obtained_marks === null ? "-" : Number(subject.obtained_marks).toFixed(2)}
-                                </td>
-                                <td>{subject.grade || "-"}</td>
-                                <td>{subject.gpa_point === null ? "-" : Number(subject.gpa_point).toFixed(2)}</td>
-                                <td>{subject.result_status}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <th colSpan="2">Total Marks</th>
-                            <th>{Number(student.total_full_marks).toFixed(2)}</th>
-                            <th>-</th>
-                            <th className="result-sheet-marks">{Number(student.total_obtained).toFixed(2)}</th>
-                            <th colSpan="3"></th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </section>
-
-            <section className="result-sheet-summary">
-                <div className="result-sheet-stat">
-                    <span>Percentage</span>
-                    <strong>{Number(student.percentage).toFixed(2)}%</strong>
-                </div>
-                <div className="result-sheet-stat">
-                    <span>Overall GPA</span>
-                    <strong>{student.overall_gpa === null ? "-" : Number(student.overall_gpa).toFixed(2)}</strong>
-                </div>
-                <div className="result-sheet-stat">
-                    <span>Overall Grade</span>
-                    <strong>{student.overall_grade || "-"}</strong>
-                </div>
-                <div className="result-sheet-stat result-sheet-final-status">
-                    <span>Final Result</span>
-                    <strong className={passed ? "result-sheet-pass" : student.overall_result === "Fail" ? "result-sheet-fail" : "result-sheet-incomplete"}>
-                        {student.overall_result}
-                    </strong>
-                </div>
-            </section>
+                <section className="result-sheet-summary" aria-label="Result summary">
+                    <div>
+                        <div className="result-sheet-percent-label">
+                            <span>Percentage</span>
+                        </div>
+                        <div className="result-sheet-percent-value">{Number(student.percentage).toFixed(2)}%</div>
+                    </div>
+                    <Bar percent={Math.min(100, Math.max(0, Number(student.percentage)))} />
+                    <div className="result-sheet-verdict">
+                        <span>Final result</span>
+                        <strong className={`result-sheet-stamp ${verdictClass}`}>{student.overall_result}</strong>
+                    </div>
+                </section>
+            </div>
 
             <footer className="result-sheet-signatures">
-                <div><span>Class Teacher</span></div>
+                <div><span>Class teacher</span></div>
                 <div><span>Guardian</span></div>
-                <div><span>Head of Institution</span></div>
+                <div><span>Head of institution</span></div>
             </footer>
         </article>
     );
